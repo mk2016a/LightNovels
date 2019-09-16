@@ -15,8 +15,16 @@ chapter_pattern_core = ('([间终]\s{0,5}?章)|'
 # chapter title split pattern
 chapter_pattern = '(?im)('+chapter_pattern_core+')[^<>]{0,30}?(?=<)'
 
-uris = [
-    #'http://tieba.baidu.com/p/6042079527',  # 21插画
-    'https://tieba.baidu.com/p/5994400912', # 20插画
+chapter_pattern = '(?m)(台版盾勇..卷.{1,4}章)(?=<)'
+
+urls = [
+    'https://tieba.baidu.com/p/5994400912', # 20c
+    'https://tieba.baidu.com/p/6186319098', # 20
+    'https://tieba.baidu.com/p/6042079527', # 21c
+    'https://tieba.baidu.com/p/6232812971', # 22c
+
 ]
-epub_make(uris, book_title='21', chapter_check=False, chapter_pattern=chapter_pattern)
+
+uris = [bd_see_lz(url) for url in urls]
+
+epub_make(uris, book_title='20', chapter_check=False, chapter_pattern=chapter_pattern)

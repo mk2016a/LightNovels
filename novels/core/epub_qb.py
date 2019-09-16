@@ -1,13 +1,13 @@
 from novels.core.epub_core import *
 
-def get_page_content(q,number,url):
-    while True:
+def get_page_content(q,number,url, max_retries=5):
+    for retries in range(max_retries):
         try:
             print(url)
             soup = bsoup(url, 'gbk')
-            result = soup.find(id='TextContent')
+            result = soup.find(id='mlfy_main_text')
             title = result.find('h1').text
-            content = str(result)
+            content = str(result.find(id='TextContent'))
             break
         except Exception as e:
             print(e)
@@ -16,69 +16,54 @@ def get_page_content(q,number,url):
 
 class QB23():
 
-    def __init__(self, url, folder=download_dir):
+    def __init__(self, url):
         self.url = url
+        self.page_book_check()
         self.soup = bsoup(url, 'gbk')
-        self.getTitleIndex()
-        self.file = folder + self.title + ' qb ' + time.strftime('%m%d%H%M') + '.epub'
 
-    def getTitleIndex(self):
-        soup = self.soup
-        url = self.url
-        if soup.find(id='chapterList'):
-            a_list = soup.find(id='chapterList').find_all('a')
-            index = [urljoin(self.url, a.get('href')) for a in a_list]
-            title = soup.find(id='bookinfo').find('h1').text
-            image = urljoin(url, soup.find(id='bookimg').find('img').get('src'))
+    def page_book_check(self):
+        if re.search(re.compile('\.html'), self.url):
+            self.book_check = False
         else:
-            index=[url]
-            title = soup.find(id='TextContent').find('h1').text
-            image = None
-        self.title = title
-        self.index = index
-        self.image = image
+            self.book_check = True
+# Book
 
-    def check_update(self):
-        return True
+    def get_book_info(self):
+        self.book_title = self.soup.find(id='bookinfo').find('h1').text
+        try:
+            self.cover_src = urljoin(self.url, self.soup.find(id='bookimg').find('img').get('src'))
+        except:
+            self.cover_src = ''
 
-    def makeEpub(self, m=3):
-        # Variable change
-        urls = self.index
-        file = self.file
-        title = self.title
-        image = self.image
+    def get_url_list(self):
+        a_list = self.soup.find(id='chapterList').find_all('a')
+        list = [urljoin(self.url, a.get('href')) for a in a_list]
+        self.url_list = [(url, '', '') for url in list]
+        return self.url_list
+# Page
 
-        # Prepare epub
-        print('Making Epub...')
-        check_delete_file(file)
-        book = mkepub.Book(title=title)
-        q = queue.PriorityQueue()
-        threads = []
+    def get_page_content(self, url, max_retries = 5):
+        srcs = []
 
-        # Add Chapters
-        for n,url in enumerate(urls):
-            t = threading.Thread(target=get_page_content, args=(q,n,url))
-            threads.append(t)
-            while threading.active_count() > m:
-                time.sleep(0.1)
-            t.start()
+        for retries in range(5):
+            try:
+                print(url)
+                soup = bsoup(url, 'gbk')
+                result = soup.find(id='mlfy_main_text')
+                title = result.find('h1').text
+                content = str(result.find(id='TextContent'))
+                break
+            except Exception as e:
+                print(e)
+                time.sleep(1)
 
-        for t in threads:
-            t.join()
+        return (title, content, srcs)
 
-        while not q.empty():
-            n, title, content = q.get()
-            #content = modify_content(content)  # modify content before add pages to keep most information for former actions
-            book.add_page(title=title, content='<h1>{}</h1>\n'.format(title) + content)
+    def get_page_title(self):
+        self.page_title = self.soup.find(id='TextContent').find('h1').text
 
-        if image != '':
-        # Set Cover
-            set_cover_src(book, image)
-        # Add CSS
-        book.set_stylesheet(css_data)
-        # Save File
-        book.save(file)
-        print(file)
+    def quit(self):
+        ''
 
 
 

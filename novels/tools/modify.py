@@ -8,11 +8,6 @@ from shutil import rmtree
 from opencc import OpenCC
 import threading
 
-
-modify_patterns = [
-    ('<p>\s*?(<img.+?>)[^<>]\s*?</p>', '<div>\g<1></div>'),
-]
-
 # Unzip EPUB
 def get_file_paths(root_path, file_types):
     file_paths = []
@@ -37,7 +32,7 @@ def unzipfile(zip_path, dst_path):
     zf.close()
 
 
-def modify_html(html_path):
+def modify_html(html_path, modify_patterns):
     with open(html_path, 'r') as f:
         content = convert_chinese(f.read())
         for m_pattern in modify_patterns:
@@ -70,8 +65,6 @@ class Modify():
         self.dst_path = convert_chinese(path.split('.')[0])
         # instead of using rstrip('.epub') because 'eb' will be stripped as well
         self.unzipEpub()
-        self.modifyEpub()
-        self.zipEpub()
 
     def unzipEpub(self):
         # unzip epub files
@@ -84,13 +77,6 @@ class Modify():
         unzipfile(zip_path, dst_path)
         os.remove(zip_path)
 
-    def modifyEpub(self):
-        dst_path = self.dst_path
-        html_paths = get_file_paths(dst_path, ['html', 'xhtml'])
-        for html_path in html_paths:
-            print(html_path)
-            modify_html(html_path)
-
     def zipEpub(self):
         # zip folder into epub
         dst_path = self.dst_path
@@ -99,10 +85,24 @@ class Modify():
         rmtree(dst_path)
         print(dst_path + '.epub')
 
+    def modifyEpub(self, modify_patterns):
+        dst_path = self.dst_path
+        html_paths = get_file_paths(dst_path, ['html', 'xhtml'])
+        for html_path in html_paths:
+            print(html_path)
+            modify_html(html_path, modify_patterns)
+        self.zipEpub()
+
 
 folder = '/Volumes/Storage/Mine/Novels'
 #folder = '/Volumes/Storage/Downloads'
 
+
+modify_patterns = [
+    #('<p>\s*?(<img.+?>)[^<>]\s*?</p>', '<div>\g<1></div>'),
+    ('<td class=\"vertical1\"><b class=\"em12\">(.+)</b></td>', '<td class="vertical1"><b class="em12"><h4>\1</h4></b></td>'),
+    ('<p class=\"biaoti1\">(\d)</p>', '<p class="biaoti1"><h5>\1</h5></p>'),
+]
 
 
 for root, dirs, files in sorted(os.walk(folder)):
@@ -110,7 +110,8 @@ for root, dirs, files in sorted(os.walk(folder)):
         if file.split('.')[-1] in ['epub']:
             try:
                 path = os.path.join(root, file)
-                Modify(path)
+                _ = Modify(path)
+                _.modifyEpub(modify_patterns)
             except Exception as e:
                 print('Error', path)
 

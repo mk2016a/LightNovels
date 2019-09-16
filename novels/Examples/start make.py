@@ -31,8 +31,18 @@ epub_make('https://www.qinxiaoshuo.com/book/Last%20Embryo%28问题儿童都来�
 
 epub_make('https://www.qinxiaoshuo.com/book/末日时在做些什么？能再一次相见吗？')
 
-'''
-
 chapter_pattern = '(?<=\u3000\u3000)(('+re_number+'{1,2}话)|(序幕)|(目次)|(终章))[^<>]{0,9}'
 
 epub_make('https://www.lightnovel.cn/forum.php?mod=viewthread&tid=984941&page=1&authorid=398034', chapter_check=True, chapter_pattern=chapter_pattern)
+
+epub_make('https://www.qinxiaoshuo.com/book/重来吧、魔王大人！?from=search')
+
+epub_make('https://www.wenku8.net/book/1707.htm')
+
+epub_make('https://www.qinxiaoshuo.com/book/为了女儿，我说不定连魔王都能干掉%28为了女儿击倒魔王%29?from=search')
+
+epub_make(['https://tieba.baidu.com/p/6133482678?see_lz=1','https://tieba.baidu.com/p/6086257120?see_lz=1'])
+
+'''
+
+epub_make(bd_see_lz('https://tieba.baidu.com/p/6055919296'))

@@ -73,7 +73,7 @@ class Zhenbai:
 
             pass
         # before get any information, it must be wait for loading all content
-        self.waitLoading(max_wait_time=20)
+        self.waitLoading(timeout=20)
         #self.scroll_down()
 
         self.getTitle()
@@ -84,21 +84,21 @@ class Zhenbai:
 
     # Wait for presense of xpath
     def waitXpath(self, xpath, time=5):
-        t1 = datetime.now()
+        t1 = time.time()
         wait = WebDriverWait(self.driver, time)
         wait.until(expected_conditions.presence_of_element_located((By.XPATH, xpath)))
-        t2 = datetime.now()
+        t2 = time.time()
         print(t2-t1)
 
     # Wait for Loading
-    def waitLoading(self, max_wait_time=30):
-        t1 = datetime.now()
+    def waitLoading(self, timeout=30):
+        t1 = time.time()
         wait_time = 0
-        while self.driver.execute_script('return document.readyState;') != 'complete' and wait_time < max_wait_time:
+        while self.driver.execute_script('return document.readyState;') != 'complete' and wait_time < timeout:
             self.scroll_down()
             wait_time += 1
             time.sleep(1)
-        t2 = datetime.now()
+        t2 = time.time()
         print(t2-t1)
         print('Load Complete.')
 

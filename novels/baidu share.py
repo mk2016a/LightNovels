@@ -110,23 +110,30 @@ class BaiduShare:
                 try_times += 1
                 pass
 
-    # Wait for Loading
-    def waitLoading(self, max_wait_time=100):
-        wait_time = 0
-        while self.driver.execute_script('return document.readyState;') != 'complete' and wait_time < max_wait_time:
-            self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-            wait_time += 0.1
-            time.sleep(0.1)
-        print('Load Complete.')
-
     # Wait for presense of xpath
-    def waitXpath(self, xpath, time=20):
-        t1 = datetime.now()
-        wait = WebDriverWait(self.driver, time)
-        wait.until(expected_conditions.presence_of_element_located((By.XPATH, xpath)))
-        t2 = datetime.now()
-        td = t2 - t1
-        print(td)
+    def waitXpath(self, xpath, timeout=5):
+        t1 = time.time()
+        while time.time() - t1 < timeout:
+            try:
+                time.sleep(1)
+                wait = WebDriverWait(driver=self.driver, timeout=timeout)
+                wait.until(expected_conditions.presence_of_element_located((By.XPATH, xpath)))
+                break
+            except:
+                pass
+        print(xpath, time.time()-t1)
+
+    # Wait for Loading
+    def waitLoading(self, timeout=30):
+        t1 = time.time()
+        while self.driver.execute_script('return document.readyState;') != 'complete' and time.time()-t1 < timeout:
+            self.scroll_down()
+            time.sleep(0.1)
+        print('Loading time', time.time()-t1)
+
+    # Scroll Down to Bottom
+    def scroll_down(self):
+        self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
 
     # Safari Click
     def jclick(self, xpath):

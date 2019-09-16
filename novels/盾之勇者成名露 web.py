@@ -17,10 +17,12 @@ chapter_pattern_core = ('([间终]\s{0,5}?章)|'
 chapter_pattern = '(?im)[^<>]{0,10}?('+chapter_pattern_core+')[^<>完鞍]{0,30}?(?=<)'
 
 
-uris = [
-    '/Volumes/Storage/Downloads/盾之勇者成名路 Web.epub',
+folder = '/Volumes/Storage/Mine/Novels/盾之勇者成名录/盾之勇者成名路 Web.epub',
+file = get_file_path(folder)
+
+urls = [
     '/Volumes/Storage/Downloads/486～505-20190425T050542Z-001.zip',
-    #'https://tieba.baidu.com/p/6015916116?see_lz=1',        # 486~505
+    'https://tieba.baidu.com/p/6015916116?see_lz=1',        # 486~505
     'https://tieba.baidu.com/p/6015572584',     # 506
     'https://tieba.baidu.com/p/6015872682',     # 507
     'https://tieba.baidu.com/p/6016520655',     # 508
@@ -57,13 +59,11 @@ uris = [
     'https://tieba.baidu.com/p/6126862838',  # 538
     'https://tieba.baidu.com/p/6127005861',  # 539
     'https://tieba.baidu.com/p/6139231568?see_lz=1',    # 540
-
+    'https://tieba.baidu.com/p/6147345339',         # 541
 ]
+
+uris = [file] + [bd_see_lz(url) for url in urls]
+
 #epub_make(uris=uris, book_title='盾之勇者成名路 Web', chapter_check=True, chapter_pattern=chapter_pattern, time_stamp=False)
 
-
-uris = [
-    '/Volumes/Storage/Mine/Novels/盾之勇者成名录/盾之勇者成名路 Web.epub',
-    #'https://tieba.baidu.com/p/6147345339',         # 541
-]
 epub_make(uris=uris, book_title='盾之勇者成名路 Web', chapter_check=False, time_stamp=False)

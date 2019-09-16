@@ -1,3 +1,6 @@
+# The core of this
+
+
 # Common
 import os
 import re
@@ -33,7 +36,7 @@ from opencc import OpenCC
 # Make Epub
 import mkepub
 
-# ---------------------- Beautiful Soup -----------------------
+# ---------------------- Variables -----------------------
 
 # Chapter Pattern
 ## Numbers
@@ -42,46 +45,49 @@ re_number = '[1234567890０１２３４５６７８９0零一二三四五六七�
 chapter_pattern_core = ('((?<=\W)序[幕章言])|((?<=\W)幕间)|((?<=\W)[间终]章)|((?<=\W)最终章)|'
                         '((?<=\W)尾声)|((?<=\W)后记)|((?<=\W)目录)|'
                         '((?<=\W)Epilogue)|((?<=\W)CONTENTS)|((?<=\W)角色介绍)|'
-                        '(第\s{0,3}?'+re_number+'{1,5}?\s{0,3}?[章话节])')
+                        '(第\s{0,3}?' + re_number + '{1,5}?\s{0,3}?[章话节])')
 ## chapter title split pattern
-chapter_pattern = '(?im)[^<>]{0,10}?('+chapter_pattern_core+')[^<>]{0,20}?(?=<)'
+chapter_pattern = '(?im)[^<>]{0,10}?(' + chapter_pattern_core + ')[^<>]{0,20}?(?=<)'
 
 ## second chapter title split pattern
-second_pattern = '(?<=>)\s*?第?('+re_number+'{1,2})[节\.]?.*?(?=<)'
+second_pattern = '(?<=>)\s*?第?(' + re_number + '{1,2})[节\.]?.*?(?=<)'
 
 # Chapter Length
-chapter_length = 500    # get rid of index list in front of a book
+chapter_length = 200  # get rid of index list in front of a book
 
 # Ocr Length
-ocr_length = 200        #  get rid of picture with few words being recognized
+ocr_length = 200  # get rid of picture with few words being recognized
+
+# Title Patterns
+title_patterns = [('<', '&lt;'), ('>', '&gt;'), ]
 
 # Modify Patterns
 modify_patterns = [
     # empty replace
-    ('<img(?! src="\.\./Images/\d{4}\.(jpg)|(gif)|(png)").*?>', ''),
+    ('<img(?! src=\"\.\./Images/).*?>', ''),
     ('(&nbsp;)|(\s{2,})|(&#160;)', ''),
-    ('(<dt.*?/dt>)|(\[/?img\])',''),
-    ('(一楼给?度娘)|( *惯例占坑。)|( *本话完)|(【草翻】)|(【翻】)|(【翻译】)|(本章未完)|(本章已完)', ''),
-    ('<.*?((本帖最后由)|(下载次数)|(下载附件)|(上传)).*?>',''),
-    ('(以下内容由.*?提供)|(={2,}?)|(【下次.+?】)',''),
-    ('<p>=</p>',''),
-    ('(--&gt;\"&gt;)|(\"&gt;)',''),
+    ('(<dt.*?/dt>)|(\[/?img\])', ''),
+    ('(一楼给?度娘)|( *惯例占坑。)|( *本话完)|(【草翻】)|(【翻】)|(【翻译】)|(本章未完)|(本章已完)|(本帖最后由)|(下载次数)|(下载附件)|(以下内容由.*?提供)|(【下次.+?】)|(<p.*?>.+?上传</p>)|(<p>.+?(\d+ KB, : \d)</p>)', ''),
+    ('(--&gt;\"&gt;)|(\"&gt;)|(<p>=</p>)', ''),
     (r'&gt;&gt;&gt;最全日本轻小说网QinXiaoShuo.com【亲小说】&lt;&lt;&lt;', ''),
     (r'最新最全的日本动漫轻小说 轻小说文库(http://www.wenku8.com) 为你一网打尽！', ''),
     (r'本文来自 轻小说文库(http://www.wenku8.com)', ''),
     # \n replace
     ('<div.*?>', ''),
-    ('</div>','\n'),
-    ('(<br.*?/?>)', '\n'),
-    ('\n{2,}', '\n'),
+    ('</div>', '\n'),
+    ('(<br.*?>)', '\n'),
     # remove useless tag
     ('<(?!/?(img)|(p)).*?>', ''),
+    # remove blank lines
+    ('(={2,}?)', ''),
+    ('^。\n', ''),
+    ('\n{2,}', '\n'),
     # add <p> tag
     ('^(?!<p>)', '<p>'),
     ('(?<!</p>)$', '</p>'),
     # replace <p> tag
     ('<p>.*?(<img.+?>.*?)</p>', '<div>\g<1></div>'),
-]# only work with bdtb or lightnovels
+]  # only work with bdtb or lightnovels
 
 # Ocr Repairs
 ocr_repair = [
@@ -95,20 +101,7 @@ ocr_repair = [
     (r'<', '&#60;'),
     (r'>', '&#62;'),
     ('(^」)|', ''),
-    ('([^<>]+?[^\.。\?？！“\”\"：』，——~――、\)）〕」】 》\]…-])\n(?![“《『\"\[])', '\g<1>')*5,
-]
-
-# Regular Expression String to Pattern Replacements
-reg_replace = [
-    ('.', '\.'),
-    ('?', '\?'),
-    ('(', '\('),
-    (')', '\)'),
-    ('[', '\['),
-    (']', '\]'),
-    ('"', '\"'),
-    ("'", '\''),
-    ('\\', '\\\\'),
+    ('([^<>]+?[^\.。\?？！“\”\"：』，——~――、\)）〕」】 》\]…-])\n(?![“《『\"\[])', '\g<1>') * 5,
 ]
 
 # Txt Replacements
@@ -126,9 +119,24 @@ txt_replacements = [
 css_data = '''h1,h2,div{text-align: center}
 p{text-indent: 2em}'''
 
+# Files and Folder
 download_dir = '/Volumes/Storage/Downloads/'
 
-#               Common Tools
+def get_file_path(folder, keyword='web'):
+    file_date_list = []
+    for root, dirs, files in os.walk(folder):
+        for file in files:
+            if re.search(keyword, file, flags=re.IGNORECASE):
+                path = os.path.join(root, file)
+                date = os.path.getctime(path)
+                file_date_list.append((path, date))
+    file = sorted(file_date_list, key=lambda line: line[-1], reverse=True)[0][0]
+    # file = file_date_list.sort(key=lambda line: line[1], reverse=True)[0]
+    # TypeError: 'NoneType' object is not subscriptable ....... not work in 3.6, but work in 3.7 above
+    return file
+
+
+# ---------------------- Beautiful Soup -----------------------
 
 # Beautiful Soup
 def bsoup(url, code='utf-8'):
@@ -136,10 +144,12 @@ def bsoup(url, code='utf-8'):
     soup = BeautifulSoup(resources, "html.parser")
     return soup
 
+
 # Convert Traditional Chinese to Simplified
 def convert_chinese(content):
     content = OpenCC('t2s').convert(content)
     return content
+
 
 def translate_html(html_path):
     with open(html_path, 'r') as f:
@@ -149,15 +159,18 @@ def translate_html(html_path):
         f.write(f_content)
         f.close()
 
+
 # Check and Make directory
 def check_make_dir(dir):
     if not os.path.isdir(dir):
         os.makedirs(dir)
 
+
 # Check and Delete file
 def check_delete_file(file):
     if os.path.isfile(file):
         os.remove(file)
+
 
 # Check Update
 def get_local_date(title, folder):
@@ -171,17 +184,11 @@ def get_local_date(title, folder):
                     local_date = date
     return local_date
 
-# Replace <img>
-def replace_url(url, replacement, content):
-    url = re.escape(url)
-    return re.sub(url, replacement, content)
 
-def replace_img(src, replacement, content):
-    return re.sub('<img[^<]*?{}[^>]*?>'.format(src), replacement, content)
-#replace_img = lambda src, replacement, content: re.sub('<img[^<]*?{}[^>]*?>'.format(src), replacement, content)
+# ---------------------- Download Images -----------------------
 
 # Read Image
-def read_image(q, image_name, image_url, out_time = 60, try_max = 10):
+def read_image(q, image_name, image_url, out_time=60, try_max=10):
     image = ''
     try_times = 1
     while try_times <= try_max:
@@ -200,17 +207,25 @@ def read_image(q, image_name, image_url, out_time = 60, try_max = 10):
             # if e.code == 403
             print(image_url)
             try_times = try_max + 2
-            #image = '403'
+            # image = '403'
 
     if try_times == try_max + 2:
-        print('Error picture:',image_name, image_url)
+        print('Error picture:', image_name, image_url)
 
     q.put((image_name, image))
 
+
 # Name Number
 def number_name(n, length=4):
-    name = (length-len(str(n)))*'0' + str(n)
+    name = (length - len(str(n))) * '0' + str(n)
     return name
+
+
+# Replace Img with src
+def replace_img(src, replacement, content):
+    print(src, replacement, sep='\n')
+    return re.sub(re.compile('<img[^<]*?{}[^>]*?>'.format(src)), replacement, content)
+
 
 # Get All Images with OCR
 def download_replace(url, image_srcs, content, book, image_count=0, ocr_check=False, max_threads=4):
@@ -226,19 +241,21 @@ def download_replace(url, image_srcs, content, book, image_count=0, ocr_check=Fa
         if ocr_check:
             ocr_content = content_ocr(image_url)
             if ocr_content:
-                content = replace_img(re.escape(src), '\g<0>\n'+ocr_content, content)
+                content = re.sub(re.escape(src), '\g<0>\n' + ocr_content, content)
                 print('ocr: {}'.format(src))
         # name
         img_number = image_count + n + 1
-        print(img_number)
         if src.split('.')[-1] == 'gif':
             image_name = number_name(img_number) + '.gif'
         elif src.split('.')[-1] == 'png':
             image_name = number_name(img_number) + '.png'
         else:
-            image_name = number_name(img_number) +'.jpg'
+            image_name = number_name(img_number) + '.jpg'
         # tag
-        content = replace_img(re.escape(src), '<div><img src="../Images/{0}"/></div>\n'.format(image_name), content)
+        src = re.sub('\&', '&amp;', src.split('/')[-1])
+        content = re.sub('<img[^<]*?{}[^>]*?>'.format(re.escape(src)),
+                         '<div><img src="../Images/{0}"/></div>\n'.format(image_name),
+                         content)
 
         # limit thread number
         while threading.active_count() > m:
@@ -264,12 +281,12 @@ def download_replace(url, image_srcs, content, book, image_count=0, ocr_check=Fa
             book.add_image(image_name, image)
 
     image_count = img_number
-    print(image_count)
 
     return content, image_count
 
+
 # Set Cover
-def set_cover_src(book, image_url, out_time=60, try_max = 4):
+def set_cover_src(book, image_url, out_time=60, try_max=3):
     try_times = 1
     while try_times <= try_max and image_url != '':
         try:
@@ -278,7 +295,6 @@ def set_cover_src(book, image_url, out_time=60, try_max = 4):
             print('Cover Setted.')
             try_times = try_max + 1
         except Exception as e:
-            print('Error02')
             print('Cover unsetted. Try again. ')
             try_times += 1
 
@@ -290,6 +306,7 @@ def ocr(src):
     ocr_json = json.loads(ocr_resources)
     return ocr_json
 
+
 def content_ocr(src_url, ocr_repairs=ocr_repair, ocr_l=ocr_length):
     try:
         ocr_json = ocr(src_url)
@@ -299,7 +316,7 @@ def content_ocr(src_url, ocr_repairs=ocr_repair, ocr_l=ocr_length):
                 ocr_content += ocr_content_json["content"]
             if len(ocr_content) > ocr_l:
                 for ocr_repair in ocr_repairs:
-                    ocr_content = re.sub(ocr_repair[0], ocr_repair[1], ocr_content, flags=re.M)
+                    ocr_content = re.sub(re.compile(ocr_repair[0], flags=re.M), ocr_repair[1], ocr_content)
             else:
                 ocr_content = False
         else:
@@ -309,85 +326,136 @@ def content_ocr(src_url, ocr_repairs=ocr_repair, ocr_l=ocr_length):
         ocr_content = False
     return ocr_content
 
+
+# ---------------------- Modify Title and Content -----------------------
+
+# Modify title
+def modify_title(title, modify_p=title_patterns):
+    for (old, new) in modify_p:
+        title = re.sub(re.compile(old, flags=re.M), new, title)
+    return title
+
+
 # Modify Content
 def modify_content(content, modify_p=modify_patterns):
     for (old, new) in modify_p:
-        content = re.sub(old, new, content, flags=re.M)
+        content = re.sub(re.compile(old, flags=re.M), new, content)
     return content
 
-# Splite Chapters
-def split_chapters(title, content, chapter_pattern=chapter_pattern, chapter_length=chapter_length, second_pattern=second_pattern, second_length=0, second_check=False):
 
+# ---------------------- Split Chapters -----------------------
+
+# Split Chapters
+def split_chapters(title, content, chapter_pattern=chapter_pattern, chapter_length=chapter_length,
+                   second_pattern=second_pattern, second_length=0, second_check=False):
     if not second_check:
-        chapter = single_split(title, content, chapter_pattern=chapter_pattern, chapter_length=chapter_length)
+        chapters = single_split(title, content, chapter_pattern=chapter_pattern, chapter_length=chapter_length)
     else:
-        chapter = double_split(title, content, first_p=chapter_pattern, second_p=second_pattern, first_l=chapter_length, second_l=second_length)
-    print(chapter)
-    return chapter
+        chapters = double_split(title, content, first_p=chapter_pattern, second_p=second_pattern, first_l=chapter_length,
+                               second_l=second_length)
+
+    return chapters
 
 ## single split chapter
 def single_split(title, content, chapter_pattern=chapter_pattern, chapter_length=chapter_length):
 
-    if re.search(chapter_pattern, content, flags=re.M):
+    compiled_pattern = re.compile(chapter_pattern, flags=re.M)
+    if re.search(compiled_pattern, content):
 
-        finditer_result = re.finditer(chapter_pattern, content, flags=re.M)
+        finditer_result = re.finditer(compiled_pattern, content)
         # print(finditer_result)       <callable_iterator object at 0x10c6373c8>
 
         chapters = []
-        chapter_title = title
-        infront_img = ''
-        begining = 0
-        before_check = True
+        chapter_title = last_title = title
+        chapter_begining = last_begining = 0
 
         for n, match_result in enumerate(finditer_result):
             print(match_result)
 
-            # get the split content end position from this match's begining
-            this_end = match_result.start()      # end for this chapter
-            next_title = match_result.group().strip(' \n\r\t')       # title for next chapter
-            # the end of this chapter is the begining of new chapter title's start
-            # when this chapter is long enough
-            if this_end - begining >= chapter_length and before_check:
-                # get chapter image infront
-                ## this image from last chapter
-                if infront_img != '':
-                    chapter_content = content[infront_img.start():this_end]
-                else:
-                    chapter_content = content[begining:this_end]
-                ## next chapter's infront image
-                if infront_img != '':
-                    chapter_content = infront_img + chapter_content
-                    infront_img = ''
-                search_results = re.search(re.compile('<img.+?>.{0, 100}$'), chapter_content)
-                if search_results != None:
-                    infront_img = search_results[-1]
-                else:
-                    infront_img = ''
+            chapter_end = match_result.start()
+            # every time the end of chapter will follow changing to maintain all content
+            # the begining remain the same only changes when chapters's last item changes
 
-                # append chapter to chapters
-                chapters.append((chapter_title, chapter_content))
 
-                # after append, next chapter's new beginning and title
-                begining = match_result.end()
-                chapter_title = next_title
+            if chapter_end - chapter_begining >= chapter_length:
 
-            elif this_end - begining >= chapter_length and before_check == False:
-                # last chapter
-                last_content = content[begining : last_end]
-                chapters.append((chapter_title, last_content))
-                # this chapter
-                chapter_content = content[last_end : this_end]
-                chapters.append((this_title, chapter_content))
-                # after twice append
-                before_check = True
-                begining = match_result.end()
-                chapter_title = next_title
-            else:
-                before_check = False
-                # for the next result, keep last ending and this title
-                last_end = this_end
-                this_title = next_title
+                chapters.append((chapter_title, content[chapter_begining: chapter_end]))
 
+                # After Append
+                ## next title, begining
+                chapter_title = match_result.group().strip(' \n\r\t')
+                chapter_begining = chapter_end
+
+        chapter_content = content[chapter_begining:]
+        chapters.append((chapter_title, chapter_content))
+
+    else:
+        # if can not being splited
+        chapters = [(title, content)]
+
+    return chapters
+
+## single split chapter
+def single_split2(title, content, chapter_pattern=chapter_pattern, chapter_length=chapter_length):
+
+    compiled_pattern = re.compile(chapter_pattern, flags=re.M)
+    if re.search(compiled_pattern, content):
+
+        finditer_result = re.finditer(compiled_pattern, content)
+        # print(finditer_result)       <callable_iterator object at 0x10c6373c8>
+
+        chapters = []
+        chapter_title = last_title = title
+        chapter_begining = last_begining = 0
+
+        for n, match_result in enumerate(finditer_result):
+            print(match_result)
+
+            chapter_end = match_result.start()
+            # every time the end of chapter will follow changing to maintain all content
+            # the begining remain the same only changes when chapters's last item changes
+
+
+            if chapter_end - chapter_begining >= chapter_length:
+
+                chapters.append((chapter_title, content[chapter_begining: chapter_end]))
+
+                # After Append
+
+                ## last title, begining
+                last_title = chapter_title
+                last_begining = chapter_begining        # keep the value of last begining is the key issue.
+
+                ## next title, begining
+                chapter_title = match_result.group().strip(' \n\r\t')
+                chapter_begining = chapter_end
+
+
+            else: #chapter_end - chapter_begining < chapter_length:
+
+                if chapter_end - last_begining >= chapter_length:
+
+                    chapters.pop(-1)
+                    chapters.append((last_title, content[last_begining: chapter_end]))
+
+                    # After Append
+
+                    # last title, begining
+                    # last_title = last_title
+                    # last_begining = last_begining
+                    # because this time appended last title and last begining content.
+                    # last is still the last
+
+                    ## next title, begining
+                    chapter_title = match_result.group().strip(' \n\r\t')
+                    chapter_begining = chapter_end
+
+                # else:
+                # remain the same value for the next result
+                # nothing in chapters changed yet
+                # last title still the last title, last begining still the last begining
+                # because the old title and begining are not used
+                # even the next chapter's title and begining will not change to the new one
 
                 # the chapter title will stay the same
                 # there will be no chapter content until next loop
@@ -395,20 +463,27 @@ def single_split(title, content, chapter_pattern=chapter_pattern, chapter_length
                 # the end will be new end in next loop
                 # the short result will be added in front
 
-           # the first match result's start is 0
+
+        # the first match result's start is 0
 
         # after all loops ended, begining is last match'es end
-        #chapter_content = modify_content(content[begining:])
-        chapter_content = content[begining:]
-        # chapters will append the last match's title and content
-        chapters.append((chapter_title, chapter_content))
+
+
+        if len(content) - chapter_begining >= chapter_length:
+            # when chapter is long enough, no need to change last item
+            chapters.append((chapter_title, content[chapter_begining:]))
+
+        else:
+            # when chapter is not long enough, pop the last one,
+            # and add content from the last begining to the end with last title
+            chapters.pop(-1)
+            chapters.append((last_title, content[last_begining:]))
 
     else:
-    # if can not being splited
+        # if can not being splited
         chapters = [(title, content)]
 
     return chapters
-
 
 ## Double Split Chapters
 def double_split(title, content, first_p=chapter_pattern, second_p=second_pattern, first_l=chapter_length, second_l=0):
@@ -416,7 +491,8 @@ def double_split(title, content, first_p=chapter_pattern, second_p=second_patter
     first_chapters = single_split(title, content, first_p, chapter_length=first_l)
     if first_chapters != []:
         for first_title, first_content in first_chapters:
-            second_chapters = single_split(first_title, first_content, chapter_pattern=second_p, chapter_length=second_l)
+            second_chapters = single_split(first_title, first_content, chapter_pattern=second_p,
+                                           chapter_length=second_l)
             if second_chapters:
                 chapters.append((first_title, second_chapters))
             else:
@@ -428,7 +504,6 @@ def double_split(title, content, first_p=chapter_pattern, second_p=second_patter
 
 # Add Chapters
 def addChapter(book, chapters, modify_patterns=modify_patterns):
-
     for title, content in chapters:
         title = modify_content(title, modify_patterns)
         # content is a string
@@ -437,20 +512,21 @@ def addChapter(book, chapters, modify_patterns=modify_patterns):
             book.add_page(title=title, content='<h1>{}</h1>\n'.format(title) + content)
         # content is a list of titles and contents
         if isinstance(content, list):
-            content1 = modify_content(content[0][1], modify_patterns)
-            first = book.add_page(title=title, content='<h1>{}</h1>\n'.format(title) + content1)
-            for title2, content2 in content[1:]:
+            second_content = modify_content(content[0][1], modify_patterns)
+            first = book.add_page(title=title, content='<h1>{}</h1>\n'.format(title) + second_content)
+            for title2, second_content in content[1:]:
                 title2 = modify_content(title2, modify_patterns)
-                content2 = modify_content(content2, modify_patterns)
-                book.add_page(title=title2, content='<h2>{}</h2>\n'.format(title2) + content2, parent=first)
+                second_content = modify_content(second_content, modify_patterns)
+                book.add_page(title=title2, content='<h2>{}</h2>\n'.format(title2) + second_content, parent=first)
 
 
 # Read Txt
 
 def modify_txt(content, replacements=txt_replacements):
     for (old, new) in replacements:
-        content = re.sub(old, new, content, flags=re.M)
+        content = re.sub(re.compile(old, flags=re.M), new, content)
     return content
+
 
 def read_txt(file, codes=['utf-8', 'gbk', 'utf-16']):
     if isinstance(codes, str):
@@ -473,6 +549,7 @@ def unzipfile(zip_path, dst_path):
     zf.extractall(dst_path)
     zf.close()
 
+
 def unzip_epub(path):
     # unzip epub files
     #   rename epub to zip
@@ -482,6 +559,7 @@ def unzip_epub(path):
     #   extract zip
     unzipfile(zip_path, path)
     os.rename(zip_path, file)
+
 
 def get_file_paths(root_path, file_types):
     file_paths = []
@@ -495,6 +573,7 @@ def get_file_paths(root_path, file_types):
                 pass
     return file_paths
 
+
 def read_opf(path):  # to correct order of files
     # Read XML
     unzip_epub(path)
@@ -505,7 +584,7 @@ def read_opf(path):  # to correct order of files
                 dir = root
                 opf_file = root + '/' + file
                 break
-    opf = open(opf_file).read()
+    opf = open(opf_file, encoding='utf-8').read()
     soup = BeautifulSoup(opf, 'xml')
 
     manifest_list = {}
@@ -519,56 +598,47 @@ def read_opf(path):  # to correct order of files
     itemrefs = spine('itemref')
     for itemref in itemrefs:
         value = manifest_list[itemref['idref']]
-        if not re.search('(cover\.xhtml)|(toc\.xhtml)|(nav\.xhtml)', value, flags=re.IGNORECASE):
+        if not re.search(re.compile('(cover\.xhtml)|(toc\.xhtml)|(nav\.xhtml)', flags=re.IGNORECASE), value):
             print(value)
             itemref_list.append(os.path.join(dir, value))
     # print(itemref_list)
     return itemref_list
 
-def read_epub(file):    # read xhtml files and get content
+
+def read_epub(file):  # read xhtml files and get content
     # Get Titles and Contents
     path = file.split('.')[0]
     title_content_list = []
     itemref_list = read_opf(path)
     for itemref in itemref_list:
         xhtml = itemref
-        with open(xhtml) as f:
+        with open(xhtml, encoding='utf-8') as f:
             soup = BeautifulSoup(f.read(), 'html.parser')
             title = soup.find('title').text
-            if len(title)<3:
+            if len(title) < 3:
                 if soup.find('h1'):
                     title = soup.find('h1').text
                 elif soup.find('h2'):
                     title = soup.find('h2').text
             print(title)
             content = str(soup.find('body'))[6:-7]
-            print(content)
             title_content_list.append((title, content))
     # Get Images
     images = {}
     for root, folders, files in os.walk(path):
         for file in files:
             if file.split('.')[-1] in ['gif', 'jpg', 'png', 'jpeg']:
-                with open(root+'/'+file, 'rb') as f:
+                with open(root + '/' + file, 'rb') as f:
                     image = f.read()
-                images[file]=image
+                images[file] = image
 
     return title_content_list, images
 
-# Modify chapter content
-'''
-                if infront_img != '':
-                    chapter_content = infront_img + chapter_content
-                    infront_img = ''
-                search_results = re.search('<img.+?>.{0,20}$', chapter_content)
-                if search_results != None:
-                    infront_img = search_results[0]
-                    chapter_content = chapter_content[:search_results.start()]
-'''
 
 # EPUB CSS
 def addCSS(book, css=css_data):
     book.set_stylesheet(css)
+
 
 # ---------------------- Selenium Driver ----------------------
 
@@ -578,6 +648,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions
 from datetime import datetime
+
 
 def set_driver():
     # Prepare Firefox
@@ -590,38 +661,57 @@ def set_driver():
     fp.set_preference('network.proxy.http_port', '8087')
     fp.set_preference('network.proxy.type', 0)  # direct
     opts = webdriver.FirefoxOptions()
-    #opts.headless = True
+    # opts.headless = True
     ##  open firefox
     driver = webdriver.Firefox(firefox_profile=fp, capabilities=caps, options=opts)
     return driver
 
+
 # Wait for Loading
-def wait_loading(driver, sleep_seconds=600, max_wait_time=900):
-    wait_time = 0
-    t1 = datetime.now()
+def wait_loading(driver, sleep_seconds=60, timeout=60, before_loading=True):
+    t1 = time.time()
     ## wait before loading
-    while driver.execute_script('return document.readyState;') == 'complete' and wait_time < sleep_seconds:
-        time.sleep(0.1)
-        wait_time += 0.1
+    if before_loading:
+        while driver.execute_script('return document.readyState;') == 'complete' and time.time() - t1 < sleep_seconds:
+            time.sleep(0.1)
+    #time.sleep(1)
     ## wait for loading
-    while driver.execute_script('return document.readyState;') != 'complete' and wait_time < max_wait_time:
+    while driver.execute_script('return document.readyState;') != 'complete' and time.time() - t1 < timeout:
+        scroll_down(driver)
+        time.sleep(0.1)
+    scroll_down(driver)
+    ## calculate waiting time
+    print('Loading time: ', time.time() - t1)
+
+
+# Wait for presense of xpath
+def waitXpath(driver, xpath, timeout=5):
+    t1 = time.time()
+    while time.time() - t1 < timeout:
         try:
-            driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+            time.sleep(1)
+            wait = WebDriverWait(driver, timeout=timeout)
+            wait.until(expected_conditions.presence_of_element_located((By.XPATH, xpath)))
+            break
         except:
             pass
-        time.sleep(0.1)
-        wait_time += 0.1
-    ## calculate waiting time
-    t2 = datetime.now()
-    print(t2 - t1)
-    print('Load Complete.')
+    print(xpath, time.time() - t1)
 
-# Check next page
-def next_page(driver, link_text):
+
+# Scroll Down to Bottom
+def scroll_down(driver):
     try:
-        next_page = driver.find_element_by_link_text(link_text)
+        driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+    except:
+        pass
+
+
+# Check next page by xpath
+def next_page(driver, xpath):
+    try:
+        next_page = driver.find_element_by_xpath(xpath)
         next_page.click()
-        wait_loading(driver)
+        wait_loading(driver, sleep_seconds=30)
         return True
     except:
         return False

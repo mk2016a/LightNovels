@@ -2,75 +2,51 @@ from novels.core.epub_core import *
 
 # Bdtb
 
-def master_only(url):
-    if not re.search('see_lz=1', url):
-        url = urllib.parse.urljoin(url, "?see_lz=1")
-    return url
+class Tieba():
 
+    def __init__(self, url):
 
-class BDTB():
-
-    def __init__(self, url, folder=download_dir):
-        #self.url = master_only(url)
-        self.url = url
+        self.url = bd_see_lz(url)
+        self.page_book_check()
         self.soup = bsoup(self.url)
-        self.getTitle()
-        self.get_page_urls()
-        self.folder = folder
-        self.file_name = self.title + ' ' + time.strftime('%m%d%H%M') + '.epub'
-        self.file = os.path.join(folder, self.file_name)
-        self.getContent()
 
-    def getTitle(self, title_tag="h3"):
-        soup = self.soup
-        try:
-            title = soup.find_all(title_tag)[0].text
-            openCC = OpenCC('t2s')
-            title = openCC.convert(title)
-        except (TypeError, IndexError):
-            title = "unknow title"
-        self.title = title
-        print(title)
+    def page_book_check(self):
+        if re.search(re.escape('tieba.baidu.com/f'), self.url):
+            self.book_check = True
+        else:
+            self.book_check = False
+
+# Book
+
+    def get_book_info(self):
+        self.book_title = ''
+        self.cover_src = ''
 
     def get_page_urls(self, ul_class='l_posts_num'):
         soup = self.soup
-        url = self.url
-        new_url_list = [self.url]
+        list = [self.url]
         try:
             for a in soup.find(class_=ul_class).find_all('a'):
-                new_url = urllib.parse.urljoin(url, a.get('href'))
-                if url in new_url and url != new_url and new_url not in new_url_list:
-                    new_url_list.append(new_url)
+                url = urllib.parse.urljoin(self.url, a.get('href'))
+                if self.url in url \
+                        and url != self.url \
+                        and url not in [item[0] for item in list]:
+                    list.append((url, '', ''))
         except Exception as e:
             print(e)
-        self.new_url_list = new_url_list
+        self.url_list = list
+        return self.url_list
 
-    def checkUpdate(self, date_class='tail-info'):
-        # url modify date
-        url = self.new_url_list[-1]
-        soup = bsoup(url)
-        date_string = soup.find_all(class_=date_class)[-1].text
-        date = datetime.strptime(date_string, '%Y-%m-%d %H:%M')
-        print(date)
-        # local modify date
-        folder = self.folder
-        title = self.title
-        local_date = get_local_date(title, folder)
-        # compare
-        if date > local_date:
-            return True
-        else:
-            return False
+# Page
 
-    def getContent(self, content_class="d_post_content j_d_post_content "):
+    def get_page_content(self, content_class="d_post_content j_d_post_content "):
         # Define Variables
-        url = self.url
-        title = self.title
+        title = self.get_page_title()
         image_srcs = []
         contents = ''
 
         # Next Page
-        for url in self.new_url_list:
+        for url in self.url_list:
 
             # Get Content and Images' src
             soup = bsoup(url)
@@ -96,36 +72,43 @@ class BDTB():
 
         self.content = contents
         self.image_srcs = image_srcs
-        return url, image_srcs, title, contents
+        return title, contents, image_srcs
 
-    def makeEpub(self):
+    def get_page_title(self, title_tag="h3"):
+        soup = self.soup
+        try:
+            title = soup.find_all(title_tag)[0].text
+            openCC = OpenCC('t2s')
+            title = openCC.convert(title)
+        except (TypeError, IndexError):
+            title = "Unknown"
+        self.page_title = title
+        print(title)
+        return title
 
-        # Variable change
-        url = self.url
+    def checkUpdate(self, date_class='tail-info'):
+        # url modify date
+        url = self.url_list[-1]
+        soup = bsoup(url)
+        date_string = soup.find_all(class_=date_class)[-1].text
+        date = datetime.strptime(date_string, '%Y-%m-%d %H:%M')
+        print(date)
+        # local modify date
+        folder = self.folder
         title = self.title
-        image_srcs = self.image_srcs
-        contents = self.content
-        file = self.file
-        print(contents)
+        local_date = get_local_date(title, folder)
+        # compare
+        if date > local_date:
+            return True
+        else:
+            return False
 
-        # Prepare
-        print('Making Epub...')
-        check_delete_file(file)
-        book = mkepub.Book(title=title)
+    def quit(self):
+        ''
 
-        if image_srcs != []:
-        # Set Cover
-            set_cover_src(book, image_srcs[0])
-        # Add Images
-            contents, n = download_replace(url, image_srcs, contents, book, ocr_check=True)
-        # Contents
-        contents = convert_chinese(contents)
-        # Split Chapters
-        chapters = double_split(title, contents, chapter_pattern, second_pattern, chapter_length)
-        # Add Chapters
-        addChapter(book, title, chapters)
-        # Add CSS
-        book.set_stylesheet(css_data)
-        # Save Book
-        book.save(file)
-        print(file)
+def bd_see_lz(url):
+    if not re.match('https?\://', url):
+        url = 'http://'+url
+    if not re.search('see_lz=1', url):
+        url = urllib.parse.urljoin(url, "?see_lz=1")
+    return url
