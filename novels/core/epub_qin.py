@@ -45,7 +45,7 @@ class Qin():
 # Page
 
     # Get Page Content
-    def get_page_content(self, url, wrong_max=50):
+    def get_page_content(self, url, wrong_max=50, next_page_check = True):
         print(url)
         wrong_times = 0
         while True:
@@ -67,7 +67,7 @@ class Qin():
                         image_srcs.append(image_src)
 
                 # Try next page
-                while self.nextPage('下一页'):
+                while next_page_check:
                     print('Next Page.')
                     resources = self.driver.page_source
                     soup = BeautifulSoup(resources, "html.parser")
@@ -79,6 +79,7 @@ class Qin():
                         image_src = image.get('src')
                         if image_src not in image_srcs:
                             image_srcs.append(image_src)
+                    next_page_check = next_page(self.driver, '//a[text()="下一页"]')
                 return (title, content, image_srcs)
 
             except Exception as e:
@@ -95,6 +96,10 @@ class Qin():
     def get_page_title(self):
         self.page_title = self.soup.find('h1').text
 
+    # Quit Driver
+    def quit(self):
+        self.driver.quit()
+
     # Check next page
     def nextPage(self, link_text):
         try:
@@ -104,7 +109,3 @@ class Qin():
             return True
         except:
             return False
-
-    # Quit Driver
-    def quit(self):
-        self.driver.quit()

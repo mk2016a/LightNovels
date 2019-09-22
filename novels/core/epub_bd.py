@@ -39,7 +39,7 @@ class Tieba():
 
 # Page
 
-    def get_page_content(self, content_class="d_post_content j_d_post_content "):
+    def get_page_content(self, content_class="d_post_content j_d_post_content ", next_page_check = True):
         # Define Variables
         title = self.get_page_title()
         image_srcs = []

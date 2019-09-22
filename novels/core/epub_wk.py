@@ -53,7 +53,7 @@ class WK8():
 # Page
 
     # Get Page Content
-    def get_page_content(self, url, wrong_max = 50):
+    def get_page_content(self, url, wrong_max = 50, next_page_check = True):
         wrong_times = 0
         while True:
             try:

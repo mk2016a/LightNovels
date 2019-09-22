@@ -77,7 +77,7 @@ class Light:
             waitXpath(self.driver, '//a[text()="显示全部楼层"]')
             pass
 
-    def log_in(self):
+    def log_in(self, username='mk2016a', password='123456Qz'):
         waitXpath(self.driver, '//div[@id="main_message"]//table', 200)
 
         self.driver.find_element_by_xpath('//div[@id="main_message"]//input[@name="username"]').send_keys(
@@ -138,7 +138,7 @@ class Light:
 # Page
 
     # Get Contents
-    def get_page_content(self, url='', content_xpath='//td[@class="t_f"]|//div[@class="pattl"]'):
+    def get_page_content(self, url='', content_xpath='//td[@class="t_f"]|//div[@class="pattl"]', next_page_check = True):
         # Define Variables
         title = self.get_page_title()
         if url == '':
@@ -150,12 +150,13 @@ class Light:
         #while True:
         # Get Content and Images' src
         # Check Next
-        next_page_check = True
+        self.driver.get(url)
+        self.only_master()
         while next_page_check:
+
             results = self.driver.find_elements_by_xpath(content_xpath)
             for result in results:
                 try:
-                    # print(result.text)
                     # Add Content
                     contents += result.get_attribute('innerHTML')
                     # Add Image srcs
@@ -168,6 +169,7 @@ class Light:
                 except Exception as e:
                     print('Error27: ', e)
                     pass
+
             next_page_check = next_page(self.driver, '//a[text()="下一页"]')
 
         self.image_srcs = image_srcs

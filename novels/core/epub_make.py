@@ -8,9 +8,75 @@ from novels.core.epub_wk import *
 from novels.tools.rename import *
 from novels.tools.translate import *
 
+# ---------------------- Variables -----------------------
+
+# Chapter Pattern
+## Numbers
+re_number = '[1234567890０１２３４５６７８９0零一二三四五六七八九十百①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳]'
+## chapter title split pattern core
+chapter_pattern_core = ('((?<=\W)序[幕章言])|((?<=\W)幕间)|((?<=\W)[间终]章)|((?<=\W)最终章)|'
+                        '((?<=\W)尾声)|((?<=\W)后记)|((?<=\W)目录)|'
+                        '((?<=\W)Epilogue)|((?<=\W)CONTENTS)|((?<=\W)角色介绍)|'
+                        '(第\s{0,3}?' + re_number + '{1,5}?\s{0,3}?[章话节])')
+## chapter title split pattern
+chapter_pattern = '(?im)[^<>]{0,10}?(' + chapter_pattern_core + ')[^<>]{0,20}?(?=<)'
+
+## second chapter title split pattern
+second_pattern = '(?<=>)\s*?第?(' + re_number + '{1,2})[节\.]?.*?(?=<)'
+
+# Chapter Length
+chapter_length = 200  # get rid of index list in front of a book
+
+# Title Patterns
+title_patterns = [('<', '&lt;'), ('>', '&gt;'), ]
+
+# Modify Patterns
+modify_patterns = [
+    # empty replace
+    ('<img(?! src=\"\.\./Images/).*?>', ''),
+    ('(&nbsp;)|(\s{2,})|(&#160;)', ''),
+    ('(<dt.*?/dt>)|(\[/?img\])', ''),
+    ('(一楼给?度娘)|( *惯例占坑。)|( *本话完)|(【草翻】)|(【翻】)|(【翻译】)|(本章未完)|(本章已完)|(本帖最后由)|(下载次数)|(下载附件)|(以下内容由.*?提供)|(【下次.+?】)|(<p.*?>.+?上传</p>)|(<p>.+?(\d+ KB, : \d)</p>)', ''),
+    ('(--&gt;\"&gt;)|(\"&gt;)|(<p>=</p>)', ''),
+    (r'&gt;&gt;&gt;最全日本轻小说网QinXiaoShuo.com【亲小说】&lt;&lt;&lt;', ''),
+    (r'最新最全的日本动漫轻小说 轻小说文库(http://www.wenku8.com) 为你一网打尽！', ''),
+    (r'本文来自 轻小说文库(http://www.wenku8.com)', ''),
+    # \n replace
+    ('<div.*?>', ''),
+    ('</div>', '\n'),
+    ('(<br.*?>)', '\n'),
+    # remove useless tag
+    ('<(?!/?(img)|(p)).*?>', ''),
+    # remove blank lines
+    ('(={2,}?)', ''),
+    ('^。\n', ''),
+    ('\n{2,}', '\n'),
+    # add <p> tag
+    ('^(?!<p>)', '<p>'),
+    ('(?<!</p>)$', '</p>'),
+    # replace <p> tag
+    ('<p>.*?(<img.+?>.*?)</p>', '<div>\g<1></div>'),
+]  # only work with bdtb or lightnovels
+
+# Txt Replacements
+txt_replacements = [
+    ('\r', '\n'),
+    (r'&#160;', ''),
+    (r'&nbsp;', ''),
+    ('<', '&gt;'),
+    ('>', '&lt;'),
+    ('^(?!<p>)', '<p>'),
+    ('(?<!</p>)$', '</p>'),
+    ('<p></p>\n', ''),
+]
+
+css_data = '''h1,h2,div{text-align: center}
+p{text-indent: 2em}'''
+
+# Files and Folder
 download_folder = '/Volumes/Storage/Downloads/'
 
-def epub_make(uris='', book_title='', folder=download_folder, chapter_check=False, second_check=False, modify_check=False, chapter_pattern=chapter_pattern, second_pattern=second_pattern, modify_p=modify_patterns, chapter_length= chapter_length, time_stamp=True):
+def epub_make(uris='', book_title='', folder=download_folder, chapter_check=False, second_check=False, chapter_pattern=chapter_pattern, second_pattern=second_pattern, modify_patterns=modify_patterns, chapter_length= chapter_length, time_stamp=True):
 
     # Prepare New Book
     if isinstance(uris, str):   # Turn string into list of uris
@@ -78,6 +144,8 @@ def epub_make(uris='', book_title='', folder=download_folder, chapter_check=Fals
                             if srcs != []:
                                 set_cover_src(book, srcs[0])
 
+                        _.driver
+
                         print(book_title)
 
                     ## Get Pages
@@ -124,8 +192,10 @@ def get_pages(_, book, image_count=0, chapter_check=False, second_check=False, c
     ## Get Url List
     if _.book_check:
         url_list = _.get_url_list()
+        print('This is a book.')
     else:
         url_list = [(_.url, '', '')]
+        print('This is a page.')
 
     ## Get Pages
     content_check = ''

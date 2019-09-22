@@ -36,7 +36,7 @@ from opencc import OpenCC
 # Make Epub
 import mkepub
 
-# ---------------------- Variables -----------------------
+# --------------------- Variables -----------------------
 
 # Chapter Pattern
 ## Numbers
@@ -54,9 +54,6 @@ second_pattern = '(?<=>)\s*?第?(' + re_number + '{1,2})[节\.]?.*?(?=<)'
 
 # Chapter Length
 chapter_length = 200  # get rid of index list in front of a book
-
-# Ocr Length
-ocr_length = 200  # get rid of picture with few words being recognized
 
 # Title Patterns
 title_patterns = [('<', '&lt;'), ('>', '&gt;'), ]
@@ -89,21 +86,6 @@ modify_patterns = [
     ('<p>.*?(<img.+?>.*?)</p>', '<div>\g<1></div>'),
 ]  # only work with bdtb or lightnovels
 
-# Ocr Repairs
-ocr_repair = [
-    # add <p> tag
-    ('^[fr」T\[]', '「'),
-    ('[JT1「\]]$', '」'),
-    ('(\.\.\.…\.)|(\.……)|(\.\.…\.)|(\.\.\.\.)|(……\.)', '……'),
-    ('(—一)|(一-)|(一—)|(一一)', '——'),
-    ('^([^「].+?」)', '「\g<1>'),
-    ('(「.+?[^」])$', '\g<1>」'),
-    (r'<', '&#60;'),
-    (r'>', '&#62;'),
-    ('(^」)|', ''),
-    ('([^<>]+?[^\.。\?？！“\”\"：』，——~――、\)）〕」】 》\]…-])\n(?![“《『\"\[])', '\g<1>') * 5,
-]
-
 # Txt Replacements
 txt_replacements = [
     ('\r', '\n'),
@@ -119,8 +101,27 @@ txt_replacements = [
 css_data = '''h1,h2,div{text-align: center}
 p{text-indent: 2em}'''
 
-# Files and Folder
-download_dir = '/Volumes/Storage/Downloads/'
+# Ocr Length
+ocr_length = 200  # get rid of picture with few words being recognized
+
+# Ocr Repairs
+ocr_repair = [
+    # add <p> tag
+    ('^[fr」T\[]', '「'),
+    ('[JT1「\]]$', '」'),
+    ('(\.\.\.…\.)|(\.……)|(\.\.…\.)|(\.\.\.\.)|(……\.)', '……'),
+    ('(—一)|(一-)|(一—)|(一一)', '——'),
+    ('^([^「].+?」)', '「\g<1>'),
+    ('(「.+?[^」])$', '\g<1>」'),
+    (r'<', '&#60;'),
+    (r'>', '&#62;'),
+    ('(^」)|', ''),
+    ('([^<>]+?[^\.。\?？！“\”\"：』，——~――、\)）〕」】 》\]…-])\n(?![“《『\"\[])', '\g<1>') * 5,
+]
+
+# Download Folder
+download_folder = '/Volumes/Storage/Downloads/'
+
 
 def get_file_path(folder, keyword='web'):
     file_date_list = []
@@ -711,6 +712,7 @@ def next_page(driver, xpath):
     try:
         next_page = driver.find_element_by_xpath(xpath)
         next_page.click()
+        print('Next Page...')
         wait_loading(driver, sleep_seconds=30)
         return True
     except:

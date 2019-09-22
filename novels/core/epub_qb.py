@@ -1,6 +1,6 @@
 from novels.core.epub_core import *
 
-def get_page_content(q,number,url, max_retries=5):
+def get_page_content(q,number,url, max_retries=5, next_page_check = True):
     for retries in range(max_retries):
         try:
             print(url)
@@ -42,7 +42,7 @@ class QB23():
         return self.url_list
 # Page
 
-    def get_page_content(self, url, max_retries = 5):
+    def get_page_content(self, url, max_retries = 5, next_page_check = True):
         srcs = []
 
         for retries in range(5):

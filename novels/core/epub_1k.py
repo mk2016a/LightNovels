@@ -37,7 +37,7 @@ def page_check(url):
 
 class Ep1k():
 
-    def __init__(self, url, folder=download_dir):
+    def __init__(self, url, folder=download_folder):
         if not folder[-1]==['/']:
             folder = folder+'/'
 
